@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mindbox-deployment
+  labels:
+    app: mindbox-deployment
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: mindbox-deployment
+  template:
+    metadata:
+      labels:
+        app: mindbox-deployment
+    spec:
+      containers:
+      - name: mindbox-deployment
+        image: mindbox:latest
+        ports:
+        - containerPort: 80
+	resources:
+      limits:
+        cpu: "200m"
+	memory: "150Mi"
+	startupProbe:
+	  httpGet:
+	    path: /healthz
+	    port: liveness-port
+	  failureThreshold: 30
+	  periodSeconds: 10
+---
+apiVersion: autoscaling/v1
+kind: HorizontalPodAutoscaler
+metadata:
+  name: mindbox-deployment
+spec:
+  scaleTargetRef:
+    apiVersion: extensions/v1beta1
+    kind: Deployment
+    name: mindbox-deployment
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      targetAverageUtilization: 70
