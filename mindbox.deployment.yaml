@@ -5,7 +5,12 @@ metadata:
   labels:
     app: mindbox-deployment
 spec:
-  replicas: 2
+  replicas: 2 # пусть будет минимальная отказоустойчивость
+  strategy: # Стратегия обновления, в задании указано "максимально отказоустойчивый", ок
+  type: RollingUpdate
+  rollingUpdate:
+     maxUnavailable: 25%
+     maxSurge: 25%
   selector:
     matchLabels:
       app: mindbox-deployment
@@ -19,17 +24,20 @@ spec:
         image: mindbox:latest
         ports:
         - containerPort: 80
-	resources:
-      limits:
-        cpu: "200m"
-	memory: "150Mi"
-	startupProbe:
-	  httpGet:
-	    path: /healthz
-	    port: liveness-port
-	  failureThreshold: 30
-	  periodSeconds: 10
+    resources: # жесткое ограничение для нашего контейнера, в документации кубернетес есть limit для Pod'ов - https://kubernetes.io/ru/docs/tasks/configure-pod-container/assign-cpu-resource/
+               # но я таким не пользовался, поэтому пусть будет так
+        limits:
+          cpu: "200m"
+          memory: "150Mi"
+    startupProbe: # мы знаем, что приложению необходимо 5-10 для инициализации, хотя возможно подойдет liveness probe
+      httpGet:
+        path: /healthz
+        port: liveness-port
+      failureThreshold: 30
+      periodSeconds: 10
 ---
+# При достаточных ресурсах, я бы наверно держал все 4 реплики одновременно, но в задании цель минимального потребления ресурсов, ок, давайте
+# используем HPA, если текущее значение больше ожидаемого, то количество реплик будет увеличено
 apiVersion: autoscaling/v1
 kind: HorizontalPodAutoscaler
 metadata:
